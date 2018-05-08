@@ -83,9 +83,9 @@ def create_argparser():
     vmg.add_argument(
         "--tag",
         help="define the tag used to override the list of VM's that should"
- 	" be backed up",
-	dest="vm_tag",
-     	default=False,
+    " be backed up",
+    dest="vm_tag",
+        default=False,
     )
     vmg.add_argument(
         "--vm-names",
@@ -224,15 +224,15 @@ def main(argv):
         # Update config file
         if opts.config_file.name != "<stdin>":
             config.write_update(opts.config_file.name)
-    
+
     # Add VM's with the tag to the vm list
     if opts.vm_tag:
-	vms=api.vms.list(max=400, query="tag="+opts.vm_tag)
+    vms=api.vms.list(max=400, query="tag="+opts.vm_tag)
         config.set_vm_names([vm.name for vm in vms])
-	# Update config file
+    # Update config file
         if opts.config_file.name != "<stdin>":
             config.write_update(opts.config_file.name)
-		
+
     # Test if config export_domain is valid
     if api.storagedomains.get(config.get_export_domain()) is None:
         logger.error("!!! Check the export_domain in the config")
@@ -279,7 +279,9 @@ def main(argv):
             api.disconnect()
             sys.exit(1)
 
-        logger.info("Start backup for: %s", vm_from_list)
+        logger.info("==================================================================================================================")
+
+        logger.info("%s - Start backup", vm_from_list)
         try:
             # Cleanup: Delete the cloned VM
             VMTools.delete_vm(api, config, vm_from_list)
@@ -301,8 +303,8 @@ def main(argv):
 
             # Create a VM snapshot:
             try:
-                logger.info("Snapshot creation started ...")
                 sleepSettle(vm_from_list, (2 * config.get_timeout()))
+                logger.info("%s - Snapshot creation started ...", vm_from_list)
                 if not config.get_dry_run():
                     vm.snapshots.add(
                         params.Snapshot(
@@ -312,7 +314,7 @@ def main(argv):
                         )
                     )
                     VMTools.wait_for_snapshot_operation(vm, config, "creation")
-                logger.info("Snapshot created")
+                logger.info("%s - Snapshot created", vm_from_list)
             except Exception as e:
                 logger.info("Can't create snapshot for VM: %s", vm_from_list)
                 logger.info("DEBUG: %s", e)
@@ -330,11 +332,11 @@ def main(argv):
                 continue
             snapshot_param = params.Snapshot(id=snapshots[0].id)
             snapshots_param = params.Snapshots(snapshot=[snapshot_param])
-            logger.info("Clone into VM (%s) started ..." % vm_clone_name)
+            logger.info("%s - Clone into VM (%s) started ..." % (vm_from_list, vm_clone_name))
             if not config.get_dry_run():
                 api.vms.add(params.VM(name=vm_clone_name, memory=vm.get_memory(), cluster=api.clusters.get(config.get_cluster_name()), snapshots=snapshots_param))
                 VMTools.wait_for_vm_operation(api, config, "Cloning", vm_from_list)
-            logger.info("Cloning finished")
+            logger.info("%s - Cloning finished", vm_from_list)
 
             # Delete backup snapshots
             VMTools.delete_snapshots(vm, config, vm_from_list)
@@ -346,11 +348,11 @@ def main(argv):
             try:
                 sleepSettle(vm_from_list, config.get_timeout())
                 vm_clone = api.vms.get(vm_clone_name)
-                logger.info("Export of VM (%s) started ..." % vm_clone_name)
+                logger.info("%s - Export of VM (%s) started ..." % (vm_from_list, vm_clone_name))
                 if not config.get_dry_run():
                     vm_clone.export(params.Action(storage_domain=api.storagedomains.get(config.get_export_domain())))
                     VMTools.wait_for_vm_operation(api, config, "Exporting", vm_from_list)
-                logger.info("Exporting finished")
+                logger.info("%s - Exporting finished", vm_from_list)
             except Exception as e:
                 logger.info("Can't export cloned VM (%s) to domain: %s", vm_clone_name, config.get_export_domain())
                 logger.info("DEBUG: %s", e)
@@ -366,9 +368,9 @@ def main(argv):
             time_minutes = int(time_diff / 60)
             time_seconds = time_diff % 60
 
-            logger.info("Duration: %s:%s minutes", time_minutes, time_seconds)
-            logger.info("VM exported as %s", vm_clone_name)
-            logger.info("Backup done for: %s", vm_from_list)
+            logger.info("%s - Duration: %s:%s minutes", vm_from_list, time_minutes, time_seconds)
+            logger.info("%s - VM exported as %s", vm_from_list, vm_clone_name)
+            logger.info("%s - Backup done", vm_from_list)
             vms_with_failures.remove(vm_from_list)
         except errors.ConnectionError as e:
             logger.error("!!! Can't connect to the server %s", e)
