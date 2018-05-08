@@ -192,6 +192,12 @@ def arguments_to_dict(opts):
             result[key] = val
     return result
 
+
+def sleepSettle(vm, duration):
+    logger.info("%s - Sleep for %s seconds to allow oVirt to settle", vm, duration)
+    time.sleep(duration)
+
+
 def main(argv):
     p = create_argparser()
     opts = p.parse_args(argv)
@@ -261,6 +267,7 @@ def main(argv):
     vms_with_failures = list(config.get_vm_names())
 
     for vm_from_list in config.get_vm_names():
+        sleepSettle(vm_from_list, config.get_timeout())
         config.clear_vm_suffix()
         vm_clone_name = vm_from_list + config.get_vm_middle() + config.get_vm_suffix()
 
@@ -295,6 +302,7 @@ def main(argv):
             # Create a VM snapshot:
             try:
                 logger.info("Snapshot creation started ...")
+                sleepSettle(vm_from_list, (2 * config.get_timeout()))
                 if not config.get_dry_run():
                     vm.snapshots.add(
                         params.Snapshot(
@@ -314,6 +322,7 @@ def main(argv):
             time.sleep(10)
 
             # Clone the snapshot into a VM
+            sleepSettle(vm_from_list, config.get_timeout())
             snapshots = vm.snapshots.list(description=config.get_snapshot_description())
             if not snapshots:
                 logger.error("!!! No snapshot found !!!")
@@ -335,6 +344,7 @@ def main(argv):
 
             # Export the VM
             try:
+                sleepSettle(vm_from_list, config.get_timeout())
                 vm_clone = api.vms.get(vm_clone_name)
                 logger.info("Export of VM (%s) started ..." % vm_clone_name)
                 if not config.get_dry_run():
@@ -348,6 +358,7 @@ def main(argv):
                 continue
 
             # Delete the VM
+            sleepSettle(vm_from_list, config.get_timeout())
             VMTools.delete_vm(api, config, vm_from_list)
 
             time_end = int(time.time())
